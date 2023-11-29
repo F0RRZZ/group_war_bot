@@ -3,7 +3,6 @@ from random import randint
 
 from aiogram import Router, filters
 from aiogram.types import Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardMarkup
 from dotenv import load_dotenv
 
 from inlines import get_bot_invite_keyboard
