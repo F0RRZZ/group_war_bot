@@ -14,11 +14,11 @@ groups_users = sa.Table(
 
 class Group(DeclarativeBase):
     __tablename__ = 'groups'
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
     users = orm.relationship(
         'User', secondary=groups_users, back_populates='groups'
     )
-    telegram_id = sa.Column(sa.Integer, index=True, unique=True)
+    telegram_id = sa.Column(sa.BigInteger, index=True, unique=True)
     name = sa.Column(sa.String)
 
 
@@ -28,10 +28,12 @@ class User(DeclarativeBase):
     groups = orm.relationship(
         'Group', secondary=groups_users, back_populates='users'
     )
-    telegram_id = sa.Column(sa.Integer)
+    telegram_id = sa.Column(sa.BigInteger)
     username = sa.Column(sa.String)
     first_name = sa.Column(sa.String)
     last_name = sa.Column(sa.String)
-    soldiers_count = sa.Column(sa.Integer, default=0)
+    soldiers_count = sa.Column(sa.BigInteger, default=0)
+    wins = sa.Column(sa.BigInteger, default=0)
+    defeats = sa.Column(sa.BigInteger, default=0)
     increased_today = sa.Column(sa.Boolean, default=False)
     raided_today = sa.Column(sa.Boolean, default=False)
