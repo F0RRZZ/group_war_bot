@@ -1,3 +1,4 @@
+from math import floor
 import os
 from random import randint
 
@@ -71,8 +72,9 @@ async def army(message: Message):
     if user.increased_today:
         await message.answer(f'@{user.username}, вы уже играли сегодня!')
         return
+    rnd_start = -10 if user.soldiers_count >= 10 else -user.soldiers_count
     delta_army = (
-        randint(1, 20) if user.soldiers_count < 4 else randint(-10, 20)
+        randint(1, 20) if user.soldiers_count == 0 else randint(rnd_start, 20)
     )
     while delta_army == 0:
         delta_army = randint(-10, 20)
@@ -137,27 +139,31 @@ async def raid(message: Message):
         )
     result = randint(0, 1)
     if result:
-        attacking_user.soldiers_count += round(
-            defending_user.soldiers_count / 10, 0
+        attacking_user.soldiers_count += floor(
+            defending_user.soldiers_count / 10
         )
         await message.answer(
             f'@{attacking_user.username} в результате боя вы получили '
-            f'{int(round(defending_user.soldiers_count / 10, 0))} солдат.'
+            f'{int(floor(defending_user.soldiers_count / 10))} солдат.'
         )
-        defending_user.soldiers_count -= round(
-            defending_user.soldiers_count / 10, 0
+        defending_user.soldiers_count -= floor(
+            defending_user.soldiers_count / 10
         )
+        attacking_user.wins += 1
+        defending_user.defeats += 1
     else:
-        defending_user.soldiers_count += round(
-            attacking_user.soldiers_count / 10, 0
+        defending_user.soldiers_count += floor(
+            attacking_user.soldiers_count / 10
         )
         await message.answer(
             f'@{attacking_user.username} в результате боя вы потеряли '
-            f'{int(round(attacking_user.soldiers_count / 10, 0))} солдат.'
+            f'{int(floor(attacking_user.soldiers_count / 10))} солдат.'
         )
-        attacking_user.soldiers_count -= round(
-            attacking_user.soldiers_count / 10, 0
+        attacking_user.soldiers_count -= floor(
+            attacking_user.soldiers_count / 10
         )
+        attacking_user.defeats += 1
+        defending_user.wins += 1
     attacking_user.raided_today = True
     db_sess.commit()
 
