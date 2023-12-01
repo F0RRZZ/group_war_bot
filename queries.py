@@ -2,7 +2,7 @@ from aiogram.types import Message
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from models import Group, User
+from models import Group, Promocode, User
 
 __all__ = []
 
@@ -29,6 +29,32 @@ def create_user(db_sess: Session, message: Message) -> None:
     db_sess.commit()
 
 
+def is_promocode_exists_and_active(db_sess: Session, promocode: str) -> bool:
+    promocode = get_promocode_by_name(db_sess, promocode)
+    if not promocode:
+        return False
+    return promocode.is_active
+
+
+def is_user_used_promo(
+    db_sess: Session, message: Message, promocode: str
+) -> bool:
+    promocode = get_promocode_by_name(db_sess, promocode)
+    for user in promocode.users:
+        if user.telegram_id == message.from_user.id:
+            return True
+    return False
+
+
+def add_user_to_promocode_list(
+    db_sess: Session, message: Message, promocode: Promocode
+) -> None:
+    user = get_user_id_by_username(db_sess, message.from_user.username)
+    user = db_sess.query(User).filter(User.telegram_id == user).first()
+    promocode.users.append(user)
+    db_sess.commit()
+
+
 def get_group_by_telegram_id(db_sess: Session, telegram_id: int) -> Group:
     return (
         db_sess.query(Group).filter(Group.telegram_id == telegram_id).first()
@@ -40,6 +66,10 @@ def get_user_id_by_username(db_sess: Session, username: str) -> int | None:
     if user:
         return user.telegram_id
     return None
+
+
+def get_promocode_by_name(db_sess: Session, promocode: str) -> Promocode:
+    return db_sess.query(Promocode).filter(Promocode.name == promocode).first()
 
 
 def is_group_exists(db_sess: Session, message: Message) -> bool:
@@ -73,5 +103,13 @@ def get_users_for_global_top(db_sess: Session) -> list[User]:
         db_sess.query(User)
         .order_by(User.soldiers_count.desc())
         .limit(10)
+        .all()
+    )
+
+
+def get_all_users_by_id(db_sess: Session, message: Message) -> list[User]:
+    return (
+        db_sess.query(User)
+        .filter(User.telegram_id == message.from_user.id)
         .all()
     )

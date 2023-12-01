@@ -191,3 +191,38 @@ async def global_top(message: Message):
     db_sess = db_session.create_session()
     users = queries.get_users_for_global_top(db_sess)
     await message.answer(generate_string_for_top(users, is_global=True))
+
+
+@router.message(filters.Command('promo'))
+async def promo(message: Message):
+    if message.chat.type != 'private':
+        await message.answer(
+            f'🚫@{message.from_user.username}, '
+            f'данная команда доступна только в личке с ботом'
+        )
+        return
+    if len(message.text.split()) == 1:
+        await message.answer('🚫Введите промокод')
+        return
+    db_sess = db_session.create_session()
+    promocode = message.text.split()[1]
+    if not queries.is_promocode_exists_and_active(db_sess, promocode):
+        await message.answer(
+            f'Промокода {promocode} не существует, либо он неактивен.'
+        )
+        return
+    if queries.is_user_used_promo(db_sess, message, promocode):
+        await message.answer('Вы уже использовали данный промокод!')
+        return
+    promocode = queries.get_promocode_by_name(db_sess, promocode)
+    users = queries.get_all_users_by_id(db_sess, message)
+    if not users:
+        await message.answer('Вас нет ни в одной группе с ботом!')
+        return
+    queries.add_user_to_promocode_list(db_sess, message, promocode)
+    for user in users:
+        user.soldiers_count += promocode.bonus_soldiers
+    db_sess.commit()
+    await message.answer(
+        f'✅Вы получили бонус в размере {promocode.bonus_soldiers} солдат'
+    )

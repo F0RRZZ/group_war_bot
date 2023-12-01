@@ -11,6 +11,13 @@ groups_users = sa.Table(
     sa.Column('user_id', sa.ForeignKey('users.id')),
 )
 
+promocodes_users = sa.Table(
+    'promocodes_users',
+    DeclarativeBase.metadata,
+    sa.Column('promocode_id', sa.ForeignKey('promocodes.id')),
+    sa.Column('user_id', sa.ForeignKey('users.id')),
+)
+
 
 class Group(DeclarativeBase):
     __tablename__ = 'groups'
@@ -28,6 +35,9 @@ class User(DeclarativeBase):
     groups = orm.relationship(
         'Group', secondary=groups_users, back_populates='users'
     )
+    promocodes = orm.relationship(
+        'Promocode', secondary=promocodes_users, back_populates='users'
+    )
     telegram_id = sa.Column(sa.BigInteger)
     username = sa.Column(sa.String)
     first_name = sa.Column(sa.String)
@@ -37,3 +47,16 @@ class User(DeclarativeBase):
     defeats = sa.Column(sa.BigInteger, default=0)
     increased_today = sa.Column(sa.Boolean, default=False)
     raided_today = sa.Column(sa.Boolean, default=False)
+
+
+class Promocode(DeclarativeBase):
+    __tablename__ = 'promocodes'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    users = orm.relationship(
+        'User',
+        secondary=promocodes_users,
+        back_populates='promocodes',
+    )
+    name = sa.Column(sa.String)
+    bonus_soldiers = sa.Column(sa.Integer)
+    is_active = sa.Column(sa.Boolean)
