@@ -66,6 +66,7 @@ async def army(message: Message):
         return
     db_sess = db_session.create_session()
     queries.add_new_user_and_group_in_db(db_sess, message)
+    queries.change_username(db_sess, message)
     user = queries.get_user_from_group(
         db_sess, message.chat.id, message.from_user.id
     )
@@ -106,6 +107,7 @@ async def raid(message: Message):
     username = text[1][1:]
     db_sess = db_session.create_session()
     queries.add_new_user_and_group_in_db(db_sess, message)
+    queries.change_username(db_sess, message)
     attacking_user = queries.get_user_from_group(
         db_sess, message.chat.id, message.from_user.id
     )

@@ -113,3 +113,10 @@ def get_all_users_by_id(db_sess: Session, message: Message) -> list[User]:
         .filter(User.telegram_id == message.from_user.id)
         .all()
     )
+
+
+def change_username(db_sess: Session, message: Message) -> None:
+    users = get_all_users_by_id(db_sess, message)
+    for user in users:
+        user.username = message.from_user.username
+    db_sess.commit()
