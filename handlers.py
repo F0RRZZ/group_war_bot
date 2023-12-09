@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from inlines import get_bot_invite_keyboard
 import queries
-from tools import generate_string_for_top
+from tools import generate_string_for_top, incline_soldier
 from utils import db_session
 
 __all__ = []
@@ -84,8 +84,10 @@ async def army(message: Message):
     db_sess.commit()
     word = 'увеличилась' if delta_army > 0 else 'уменьшилась'
     await message.answer(
-        f'@{user.username}, ваша армия {word} на {abs(delta_army)} солдата!\n'
-        f'Всего у вас {user.soldiers_count} солдата.'
+        f'@{user.username}, ваша армия {word} на '
+        f'{abs(delta_army)} {incline_soldier(abs(delta_army))}!\n'
+        f'Всего у вас {user.soldiers_count} '
+        f'{incline_soldier(user.soldiers_count)}.'
     )
 
 
@@ -144,9 +146,10 @@ async def raid(message: Message):
         attacking_user.soldiers_count += floor(
             defending_user.soldiers_count / 10
         )
+        delta = int(floor(defending_user.soldiers_count / 10))
         await message.answer(
             f'@{attacking_user.username} в результате боя вы получили '
-            f'{int(floor(defending_user.soldiers_count / 10))} солдат.'
+            f'{delta} {incline_soldier(delta)}.'
         )
         defending_user.soldiers_count -= floor(
             defending_user.soldiers_count / 10
@@ -157,9 +160,10 @@ async def raid(message: Message):
         defending_user.soldiers_count += floor(
             attacking_user.soldiers_count / 10
         )
+        delta = int(floor(attacking_user.soldiers_count / 10))
         await message.answer(
             f'@{attacking_user.username} в результате боя вы потеряли '
-            f'{int(floor(attacking_user.soldiers_count / 10))} солдат.'
+            f'{delta} {incline_soldier(delta)}.'
         )
         attacking_user.soldiers_count -= floor(
             attacking_user.soldiers_count / 10
@@ -226,5 +230,6 @@ async def promo(message: Message):
         user.soldiers_count += promocode.bonus_soldiers
     db_sess.commit()
     await message.answer(
-        f'✅Вы получили бонус в размере {promocode.bonus_soldiers} солдат'
+        f'✅Вы получили бонус в размере {promocode.bonus_soldiers} '
+        f'{incline_soldier(promocode.bonus_soldiers)}'
     )

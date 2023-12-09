@@ -15,3 +15,9 @@ def generate_string_for_top(users: list[User], is_global=False) -> str:
             f'({user.wins} побед, {user.defeats} поражений)\n'
         )
     return string
+
+
+def incline_soldier(number: int) -> str:
+    if str(number)[-1] in '10' or number < 20:
+        return 'солдат'
+    return 'солдата'
