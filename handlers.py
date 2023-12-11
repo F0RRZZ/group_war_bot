@@ -1,5 +1,6 @@
 from math import floor
 import os
+from secrets import token_hex
 from random import randint
 
 from aiogram import Router, filters
@@ -34,7 +35,7 @@ async def start(message: Message):
         'Каждые 24 часа ты можешь ввести команду /army, '
         'где можешь получить случайное количество '
         'солдат от -10 до 20 солдат.\n'
-        'Также с помощью команды /rade и юзернейма игрока '
+        'Также с помощью команды /raid и юзернейма игрока '
         'ты можешь напасть на любого '
         'участника чата, у которого 10 или больше солдат. '
         'С вероятностью 50/50 ты можешь получить 10% от '
@@ -49,9 +50,19 @@ async def help(message: Message):
     await message.answer(
         'Команды бота:\n'
         '/army - получить/потерять от -10 до 20 солдат\n'
-        '/rade @username - напасть на человека из группы\n'
+        '/raid @username - напасть на человека из группы\n'
         '/top_army - топ 10 самых великих армий в группе\n'
-        '/global_top - топ 10 самых великих армий в мире\n\n'
+        '/global_top - топ 10 самых великих армий в мире\n'
+        '/create_token - создать реферальный токен '
+        '(с каждой попытки подключенных к вам '
+        'пользователей вы будете получать 1 солдата)\n'
+        '/my_token - посмотреть свой токен\n'
+        '/link - подключиться к другому пользователю и '
+        'получить 30 солдат в каждый чат '
+        '(вводить можно только 1 раз!)\n\n'
+        'Если бот не отвечает на ваши сообщения, попробуйте '
+        'ввести команду таким образом: /<команда>@group_war_bot '
+        'либо выдайте боту админку\n\n'
         'Наш канал: t.me/group_war'
     )
 
@@ -60,7 +71,7 @@ async def help(message: Message):
 async def army(message: Message):
     if message.chat.type not in ('group', 'supergroup'):
         await message.answer(
-            'Данная команда доступна только в группах',
+            '🚫Данная команда доступна только в группах',
             reply_markup=get_bot_invite_keyboard(),
         )
         return
@@ -71,7 +82,10 @@ async def army(message: Message):
         db_sess, message.chat.id, message.from_user.id
     )
     if user.increased_today:
-        await message.answer(f'@{user.username}, вы уже играли сегодня!')
+        await message.answer(
+            f'🚫@{user.username}, вы уже играли сегодня!\n'
+            f'Следующее обновление в 22:00 по МСК'
+        )
         return
     rnd_start = -10 if user.soldiers_count >= 10 else -user.soldiers_count
     delta_army = (
@@ -84,25 +98,32 @@ async def army(message: Message):
     db_sess.commit()
     word = 'увеличилась' if delta_army > 0 else 'уменьшилась'
     await message.answer(
-        f'@{user.username}, ваша армия {word} на '
+        f'🪖@{user.username}, ваша армия {word} на '
         f'{abs(delta_army)} {incline_soldier(abs(delta_army))}!\n'
         f'Всего у вас {user.soldiers_count} '
         f'{incline_soldier(user.soldiers_count)}.'
     )
+    if queries.is_user_linked(db_sess, message.from_user.id):
+        linked_user = queries.get_linked_user(db_sess, message.from_user.id)
+        parent_id = linked_user.parent_ref_user.telegram_id
+        users = queries.get_all_users_by_id(db_sess, parent_id)
+        for user in users:
+            user.soldiers_count += 1
+        db_sess.commit()
 
 
 @router.message(filters.Command('raid'))
 async def raid(message: Message):
     if message.chat.type not in ('group', 'supergroup'):
         await message.answer(
-            'Данная команда доступна только в группах',
+            '🚫Данная команда доступна только в группах',
             reply_markup=get_bot_invite_keyboard(),
         )
         return
     text = message.text.split()
     if len(text) == 1 or not text[1].startswith('@'):
         await message.answer(
-            f'@{message.from_user.username}, вам нужно '
+            f'⚠️@{message.from_user.username}, вам нужно '
             f'отметить участника группы',
         )
         return
@@ -119,28 +140,30 @@ async def raid(message: Message):
     )
     if attacking_user.raided_today:
         await message.answer(
-            f'@{attacking_user.username}, вы уже нападали сегодня!',
+            f'🚫@{attacking_user.username}, вы уже нападали сегодня!\n'
+            f'Следующее обновление в 22:00 по МСК'
         )
         return
     if attacking_user.telegram_id == defending_user.telegram_id:
         await message.answer(
-            f'@{attacking_user.username}, нельзя напасть на себя!',
+            f'🚫@{attacking_user.username}, нельзя напасть на себя!',
         )
         return
     if attacking_user.soldiers_count < 10:
         await message.answer(
-            f'@{attacking_user.username}, у вас меньше 10 солдат!',
+            f'🚫@{attacking_user.username}, у вас меньше 10 солдат!',
         )
         return
     if defending_user is None:
         await message.answer(
-            f'@{attacking_user.username}, пользователь не найден!',
+            f'🚫@{attacking_user.username}, пользователь не найден!',
         )
         return
     if defending_user.soldiers_count < 10:
         await message.answer(
-            f'@{attacking_user.username}, у пользователя меньше 10 солдат!',
+            f'🚫@{attacking_user.username}, у пользователя меньше 10 солдат!',
         )
+        return
     result = randint(0, 1)
     if result:
         attacking_user.soldiers_count += floor(
@@ -148,7 +171,7 @@ async def raid(message: Message):
         )
         delta = int(floor(defending_user.soldiers_count / 10))
         await message.answer(
-            f'@{attacking_user.username} в результате боя вы получили '
+            f'🪖@{attacking_user.username} в результате боя вы получили '
             f'{delta} {incline_soldier(delta)}.'
         )
         defending_user.soldiers_count -= floor(
@@ -162,7 +185,7 @@ async def raid(message: Message):
         )
         delta = int(floor(attacking_user.soldiers_count / 10))
         await message.answer(
-            f'@{attacking_user.username} в результате боя вы потеряли '
+            f'🪖@{attacking_user.username} в результате боя вы потеряли '
             f'{delta} {incline_soldier(delta)}.'
         )
         attacking_user.soldiers_count -= floor(
@@ -178,7 +201,7 @@ async def raid(message: Message):
 async def top_army(message: Message):
     if message.chat.type not in ('group', 'supergroup'):
         await message.answer(
-            'Данная команда доступна только в группах',
+            '🚫Данная команда доступна только в группах',
             reply_markup=get_bot_invite_keyboard(),
         )
         return
@@ -214,16 +237,16 @@ async def promo(message: Message):
     promocode = message.text.split()[1]
     if not queries.is_promocode_exists_and_active(db_sess, promocode):
         await message.answer(
-            f'Промокода {promocode} не существует, либо он неактивен.'
+            f'🚫Промокода {promocode} не существует, либо он неактивен.'
         )
         return
     if queries.is_user_used_promo(db_sess, message, promocode):
-        await message.answer('Вы уже использовали данный промокод!')
+        await message.answer('🚫Вы уже использовали данный промокод!')
         return
     promocode = queries.get_promocode_by_name(db_sess, promocode)
-    users = queries.get_all_users_by_id(db_sess, message)
+    users = queries.get_all_users_by_id(db_sess, message.from_user.id)
     if not users:
-        await message.answer('Вас нет ни в одной группе с ботом!')
+        await message.answer('🚫Вас нет ни в одной группе с ботом!')
         return
     queries.add_user_to_promocode_list(db_sess, message, promocode)
     for user in users:
@@ -232,4 +255,89 @@ async def promo(message: Message):
     await message.answer(
         f'✅Вы получили бонус в размере {promocode.bonus_soldiers} '
         f'{incline_soldier(promocode.bonus_soldiers)}'
+    )
+
+
+@router.message(filters.Command('create_token'))
+async def create_token(message: Message):
+    if message.chat.type != 'private':
+        await message.answer(
+            f'🚫@{message.from_user.username}, '
+            f'данная команда доступна только в личке с ботом'
+        )
+        return
+    db_sess = db_session.create_session()
+    if queries.is_user_parent_ref(db_sess, message):
+        ref = queries.get_parent_ref_by_id(db_sess, message)
+        await message.answer(
+            f'⚠️У вас уже есть реферальный токен: `{ref.token}`',
+            parse_mode='MARKDOWN',
+        )
+        return
+    token = token_hex(16)
+    queries.create_parent_ref(db_sess, message, token)
+    await message.answer(
+        f'🌐Ваш реферальный токен: `{token}`\n\n '
+        f'Теперь вы можете передавать его своим '
+        f'друзьям и получать 1 солдата в каждый чат с каждой их попытки',
+        parse_mode='MARKDOWN',
+    )
+
+
+@router.message(filters.Command('my_token'))
+async def my_token(message: Message):
+    if message.chat.type != 'private':
+        await message.answer(
+            f'🚫@{message.from_user.username}, '
+            f'данная команда доступна только в личке с ботом'
+        )
+        return
+    db_sess = db_session.create_session()
+    if not queries.is_user_parent_ref(db_sess, message):
+        await message.answer(
+            '⚠️Вы еще не создали токен. Чтобы создать введите /create_token'
+        )
+        return
+    ref = queries.get_parent_ref_by_id(db_sess, message)
+    await message.answer(
+        f'🌐Ваш токен: `{ref.token}`',
+        parse_mode='MARKDOWN',
+    )
+
+
+@router.message(filters.Command('link'))
+async def link(message: Message):
+    if message.chat.type != 'private':
+        await message.answer(
+            f'🚫@{message.from_user.username}, '
+            f'данная команда доступна только в личке с ботом'
+        )
+        return
+    if len(message.text.split()) == 1:
+        await message.answer('🚫Введите токен')
+        return
+    token = message.text.split()[1]
+    db_sess = db_session.create_session()
+    if queries.is_user_linked(db_sess, message.chat.id):
+        linked_user = queries.get_linked_user(db_sess, message.chat.id)
+        await message.answer(
+            f'🚫Вы уже привязаны к пользователю '
+            f'@{linked_user.parent_ref_user.username}'
+        )
+        return
+    parent_user = queries.get_parent_ref_by_token(db_sess, token)
+    if not parent_user:
+        await message.answer('🚫Такого токена не существует')
+        return
+    if parent_user.telegram_id == message.chat.id:
+        await message.answer('🚫Нельзя подключиться к себе же')
+        return
+    queries.create_linked_user(db_sess, message, parent_user)
+    users = queries.get_all_users_by_id(db_sess, message.chat.id)
+    for user in users:
+        user.soldiers_count += 30
+    db_sess.commit()
+    await message.answer(
+        f'✅Вы привязаны к пользователю @{parent_user.username}\n\n'
+        f'Также вам начисленно 30 солдат во все чаты'
     )

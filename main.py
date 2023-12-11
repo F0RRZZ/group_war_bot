@@ -1,25 +1,20 @@
 import asyncio
 from datetime import datetime as dt
-import os
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import F
 from aiogram.filters import Command
-from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from dotenv import load_dotenv
 
 from apsched import send_message_cron
 import broadcast_handlers as bh
+from config import bot, dp
 from handlers import router
 from states import BroadcastStatesGroup
 
 __all__ = []
 
-load_dotenv()
-
 
 async def main():
-    bot = Bot(token=os.getenv('TOKEN'))
     scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
     scheduler.add_job(
         send_message_cron,
@@ -28,7 +23,6 @@ async def main():
         start_date=dt.now(),
     )
     scheduler.start()
-    dp = Dispatcher(storage=MemoryStorage())
     await bot.delete_webhook()
     dp.message.register(
         bh.broadcast,

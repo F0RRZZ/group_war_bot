@@ -1,4 +1,5 @@
-from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 __all__ = ['get_confirm_button_keyboard']
 

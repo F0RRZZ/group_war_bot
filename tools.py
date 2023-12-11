@@ -1,6 +1,3 @@
-from aiogram.types import Message
-from sqlalchemy.orm import Session
-
 from models import User
 
 

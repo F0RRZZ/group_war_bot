@@ -60,3 +60,25 @@ class Promocode(DeclarativeBase):
     name = sa.Column(sa.String)
     bonus_soldiers = sa.Column(sa.Integer)
     is_active = sa.Column(sa.Boolean)
+
+
+class ParentReferalUser(DeclarativeBase):
+    __tablename__ = 'parent_ref_users'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    linked_users = orm.relationship(
+        'LinkedReferalUser', back_populates='parent_ref_user'
+    )
+    telegram_id = sa.Column(sa.BigInteger, index=True, unique=True)
+    username = sa.Column(sa.String)
+    token = sa.Column(sa.String, nullable=False, unique=True)
+
+
+class LinkedReferalUser(DeclarativeBase):
+    __tablename__ = 'linked_ref_users'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    parent_id = sa.Column(sa.Integer, sa.ForeignKey('parent_ref_users.id'))
+    parent_ref_user = orm.relationship(
+        'ParentReferalUser', back_populates='linked_users'
+    )
+    telegram_id = sa.Column(sa.BigInteger, index=True, unique=True)
+    username = sa.Column(sa.String)
