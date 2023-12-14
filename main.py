@@ -5,7 +5,7 @@ from aiogram import F
 from aiogram.filters import Command
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from apsched import send_message_cron
+from apsched import change_increase_and_raid_status
 import broadcast_handlers as bh
 from config import bot, dp
 from handlers import router
@@ -17,7 +17,7 @@ __all__ = []
 async def main():
     scheduler = AsyncIOScheduler(timezone='Europe/Moscow')
     scheduler.add_job(
-        send_message_cron,
+        change_increase_and_raid_status,
         trigger='cron',
         hour=22,
         start_date=dt.now(),

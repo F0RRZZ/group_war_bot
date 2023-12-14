@@ -18,7 +18,7 @@ db_session.global_init(
 )
 
 
-async def send_message_cron():
+async def change_increase_and_raid_status():
     db_sess = db_session.create_session()
     for user in db_sess.query(User).all():
         user.increased_today = False
