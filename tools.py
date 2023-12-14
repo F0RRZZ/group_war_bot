@@ -8,9 +8,9 @@ def generate_string_for_top(users: list[User], is_global=False) -> str:
         string = '🪖Топ 10 армий в группе:\n'
     for i, user in enumerate(users):
         string += (
-            f'{i + 1}. 🎄({get_rank(user.soldiers_count)})'
+            f'{i + 1}. 🎄({get_rank(user.soldiers_count)}) '
             f'{user.first_name} - {user.soldiers_count}'
-            f'({user.wins} побед, {user.defeats} поражений)🎄\n'
+            f' ({user.wins} побед, {user.defeats} поражений)🎄\n'
         )
     return string
 
