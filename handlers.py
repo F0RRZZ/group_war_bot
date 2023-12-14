@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from inlines import get_bot_invite_keyboard
 import queries
-from tools import generate_string_for_top, incline_soldier
+import tools
 from utils import db_session
 
 __all__ = []
@@ -39,7 +39,8 @@ async def start(message: Message):
         'ты можешь напасть на любого '
         'участника чата, у которого 10 или больше солдат. '
         'С вероятностью 50/50 ты можешь получить 10% от '
-        'его армии либо потерять 10% от своей.\n\n'
+        'его армии либо потерять 10% от своей. '
+        '(лимит на выигрыш - 20 солдат)\n\n'
         'Если есть вопросы по работе бота, пиши /help',
         reply_markup=keyboard,
     )
@@ -88,20 +89,20 @@ async def army(message: Message):
         )
         return
     rnd_start = -10 if user.soldiers_count >= 10 else -user.soldiers_count
-    delta_army = (
-        randint(1, 20) if user.soldiers_count == 0 else randint(rnd_start, 20)
-    )
+    rnd_start += rnd_start == 0
+    delta_army = randint(rnd_start, 20)
     while delta_army == 0:
-        delta_army = randint(-10, 20)
+        delta_army = randint(rnd_start, 20)
     user.soldiers_count += delta_army
     user.increased_today = True
     db_sess.commit()
     word = 'увеличилась' if delta_army > 0 else 'уменьшилась'
     await message.answer(
         f'🪖@{user.username}, ваша армия {word} на '
-        f'{abs(delta_army)} {incline_soldier(abs(delta_army))}!\n'
+        f'{abs(delta_army)} {tools.incline_soldier(abs(delta_army))}!\n'
         f'Всего у вас {user.soldiers_count} '
-        f'{incline_soldier(user.soldiers_count)}.'
+        f'{tools.incline_soldier(user.soldiers_count)}.\n'
+        f'Ваше звание: {tools.get_rank(user.soldiers_count)}'
     )
     if queries.is_user_linked(db_sess, message.from_user.id):
         linked_user = queries.get_linked_user(db_sess, message.from_user.id)
@@ -138,59 +139,61 @@ async def raid(message: Message):
     defending_user = queries.get_user_from_group(
         db_sess, message.chat.id, defending_user
     )
-    if attacking_user.raided_today:
-        await message.answer(
-            f'🚫@{attacking_user.username}, вы уже нападали сегодня!\n'
-            f'Следующее обновление в 22:00 по МСК'
-        )
-        return
-    if attacking_user.telegram_id == defending_user.telegram_id:
-        await message.answer(
-            f'🚫@{attacking_user.username}, нельзя напасть на себя!',
-        )
-        return
-    if attacking_user.soldiers_count < 10:
-        await message.answer(
-            f'🚫@{attacking_user.username}, у вас меньше 10 солдат!',
-        )
-        return
-    if defending_user is None:
-        await message.answer(
-            f'🚫@{attacking_user.username}, пользователь не найден!',
-        )
-        return
-    if defending_user.soldiers_count < 10:
-        await message.answer(
-            f'🚫@{attacking_user.username}, у пользователя меньше 10 солдат!',
-        )
-        return
+    error_answers = {
+        'raided_today': f'🚫@{attacking_user.username}, '
+        f'вы уже нападали сегодня!\n'
+        f'Следующее обновление в 22:00 по МСК',
+        'attacked_himself': f'🚫@{attacking_user.username}, '
+        f'нельзя напасть на себя!',
+        'attacking_user_has_fewer_soldiers': f'🚫@{attacking_user.username}, '
+        f'у вас меньше 10 солдат!',
+        'defending_user_not_found': f'🚫@{attacking_user.username}, '
+        f'пользователь не найден!',
+        'defending_user_has_fewer_soldiers': f'🚫@{attacking_user.username}, '
+        f'у пользователя меньше 10 солдат!',
+    }
+    is_user_can_raid = tools.is_user_can_raid(attacking_user, defending_user)
+    if not is_user_can_raid[0]:
+        await message.answer(error_answers[is_user_can_raid[1]])
     result = randint(0, 1)
     if result:
-        attacking_user.soldiers_count += floor(
-            defending_user.soldiers_count / 10
-        )
-        delta = int(floor(defending_user.soldiers_count / 10))
+        if floor(defending_user.soldiers_count / 10) > 20:
+            attacking_user.soldiers_count += 20
+            delta = 20
+        else:
+            attacking_user.soldiers_count += floor(
+                defending_user.soldiers_count / 10
+            )
+            delta = int(floor(defending_user.soldiers_count / 10))
+        soldiers_delta = attacking_user.soldiers_count
         await message.answer(
             f'🪖@{attacking_user.username} в результате боя вы получили '
-            f'{delta} {incline_soldier(delta)}.'
+            f'{delta} {tools.incline_soldier(delta)}.\n'
+            f'Всего у вас {soldiers_delta} '
+            f'{tools.incline_soldier(soldiers_delta)}\n'
+            f'Ваше звание: {tools.get_rank(soldiers_delta)}'
         )
-        defending_user.soldiers_count -= floor(
-            defending_user.soldiers_count / 10
-        )
+        defending_user.soldiers_count -= delta
         attacking_user.wins += 1
         defending_user.defeats += 1
     else:
-        defending_user.soldiers_count += floor(
-            attacking_user.soldiers_count / 10
-        )
-        delta = int(floor(attacking_user.soldiers_count / 10))
+        if floor(attacking_user.soldiers_count / 10) > 20:
+            defending_user.soldiers_count += 20
+            delta = 20
+        else:
+            defending_user.soldiers_count += floor(
+                attacking_user.soldiers_count / 10
+            )
+            delta = int(floor(attacking_user.soldiers_count / 10))
+        soldiers_delta = attacking_user.soldiers_count - delta
         await message.answer(
             f'🪖@{attacking_user.username} в результате боя вы потеряли '
-            f'{delta} {incline_soldier(delta)}.'
+            f'{delta} {tools.incline_soldier(delta)}.'
+            f'Всего у вас {soldiers_delta} '
+            f'{tools.incline_soldier(soldiers_delta)}\n'
+            f'Ваше звание: {tools.get_rank(soldiers_delta)}'
         )
-        attacking_user.soldiers_count -= floor(
-            attacking_user.soldiers_count / 10
-        )
+        attacking_user.soldiers_count -= delta
         attacking_user.defeats += 1
         defending_user.wins += 1
     attacking_user.raided_today = True
@@ -212,14 +215,14 @@ async def top_army(message: Message):
         key=lambda user: user.soldiers_count,
         reverse=True,
     )[:10]
-    await message.answer(generate_string_for_top(users, is_global=False))
+    await message.answer(tools.generate_string_for_top(users, is_global=False))
 
 
 @router.message(filters.Command('global_top'))
 async def global_top(message: Message):
     db_sess = db_session.create_session()
     users = queries.get_users_for_global_top(db_sess)
-    await message.answer(generate_string_for_top(users, is_global=True))
+    await message.answer(tools.generate_string_for_top(users, is_global=True))
 
 
 @router.message(filters.Command('promo'))
@@ -254,7 +257,7 @@ async def promo(message: Message):
     db_sess.commit()
     await message.answer(
         f'✅Вы получили бонус в размере {promocode.bonus_soldiers} '
-        f'{incline_soldier(promocode.bonus_soldiers)}'
+        f'{tools.incline_soldier(promocode.bonus_soldiers)}'
     )
 
 
