@@ -155,6 +155,7 @@ async def raid(message: Message):
     is_user_can_raid = tools.is_user_can_raid(attacking_user, defending_user)
     if not is_user_can_raid[0]:
         await message.answer(error_answers[is_user_can_raid[1]])
+        return
     result = randint(0, 1)
     if result:
         if floor(defending_user.soldiers_count / 10) > 20:
