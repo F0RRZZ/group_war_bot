@@ -1,7 +1,7 @@
 from math import floor
 import os
 from secrets import token_hex
-from random import randint
+from random import randint, random
 
 from aiogram import Router, filters
 from aiogram.types import Message
@@ -89,8 +89,10 @@ async def army(message: Message):
         )
         return
     rnd_start = -10 if user.soldiers_count >= 10 else -user.soldiers_count
-    rnd_start += rnd_start == 0
-    delta_army = randint(rnd_start, 20)
+    if random() > 0.6:
+        delta_army = randint(rnd_start, -1)
+    else:
+        delta_army = randint(1, 20)
     while delta_army == 0:
         delta_army = randint(rnd_start, 20)
     user.soldiers_count += delta_army
