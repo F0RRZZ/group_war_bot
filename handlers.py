@@ -88,13 +88,15 @@ async def army(message: Message):
             f'Следующее обновление в 22:00 по МСК'
         )
         return
-    rnd_start = -10 if user.soldiers_count >= 10 else -user.soldiers_count
     if random() > 0.6:
-        delta_army = randint(rnd_start, -1)
+        if user.soldiers_count != 0:
+            delta_army = randint(
+                -10 if user.soldiers_count >= 10 else -user.soldiers_count, -1
+            )
+        else:
+            delta_army = randint(1, 20)
     else:
         delta_army = randint(1, 20)
-    while delta_army == 0:
-        delta_army = randint(rnd_start, 20)
     user.soldiers_count += delta_army
     user.increased_today = True
     db_sess.commit()
