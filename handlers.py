@@ -349,3 +349,16 @@ async def link(message: Message):
         f'✅Вы привязаны к пользователю @{parent_user.username}\n\n'
         f'Также вам начисленно 30 солдат во все чаты'
     )
+
+
+@router.message(filters.Command('my_stats'))
+async def my_stats(message: Message):
+    db_sess = db_session.create_session()
+    user = queries.get_user_from_group(
+        db_sess, message.chat.id, message.from_user.id
+    )
+    await message.answer(
+        f'🪖@{message.from_user.username}, у вас {user.soldiers_count} '
+        f'{tools.incline_soldier(user.soldiers_count)}.\n'
+        f'Ваше звание: {tools.get_rank(user.soldiers_count)}'
+    )
