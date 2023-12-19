@@ -24,3 +24,10 @@ async def change_increase_and_raid_status():
         user.increased_today = False
         user.raided_today = False
     db_sess.commit()
+
+
+async def reset_stats():
+    db_sess = db_session.create_session()
+    for user in db_sess.query(User).all():
+        user.soldiers_count = 0
+    db_sess.commit()

@@ -4,7 +4,7 @@ from secrets import token_hex
 from random import randint, random
 
 from aiogram import Router, filters
-from aiogram.types import Message
+from aiogram.types import FSInputFile, Message
 from dotenv import load_dotenv
 
 from inlines import get_bot_invite_keyboard
@@ -357,8 +357,11 @@ async def my_stats(message: Message):
     user = queries.get_user_from_group(
         db_sess, message.chat.id, message.from_user.id
     )
-    await message.answer(
+    rank = tools.get_rank(user.soldiers_count)
+    photo = FSInputFile(f'ranks/{rank.lower()}.png')
+    await message.answer_photo(
+        photo,
         f'🪖@{message.from_user.username}, у вас {user.soldiers_count} '
         f'{tools.incline_soldier(user.soldiers_count)}.\n'
-        f'Ваше звание: {tools.get_rank(user.soldiers_count)}'
+        f'Ваше звание: {rank}',
     )
