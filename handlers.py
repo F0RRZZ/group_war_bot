@@ -8,6 +8,7 @@ from aiogram.types import FSInputFile, Message
 from dotenv import load_dotenv
 
 from inlines import get_bot_invite_keyboard
+import messages
 import queries
 import tools
 from utils import db_session
@@ -31,54 +32,22 @@ db_session.global_init(
 async def start(message: Message):
     keyboard = get_bot_invite_keyboard()
     await message.answer(
-        'Привет! Я Group War Bot\n\nВ чем смысл бота?\n'
-        'Каждые 24 часа ты можешь ввести команду /army, '
-        'где можешь получить случайное количество '
-        'солдат от -10 до 20 солдат.\n'
-        'Также с помощью команды /raid и юзернейма игрока '
-        'ты можешь напасть на любого '
-        'участника чата, у которого 10 или больше солдат. '
-        'С вероятностью 50/50 ты можешь получить 10% от '
-        'его армии либо потерять 10% от своей. '
-        '(лимит на выигрыш - 20 солдат)\n\n'
-        'Если есть вопросы по работе бота, пиши /help',
+        messages.start_message,
         reply_markup=keyboard,
     )
 
 
 @router.message(filters.Command('help'))
 async def help(message: Message):
-    await message.answer(
-        'Команды бота:\n'
-        '/army - получить/потерять от -10 до 20 солдат\n'
-        '/raid @username - напасть на человека из группы\n'
-        '/top_army - топ 10 самых великих армий в группе\n'
-        '/global_top - топ 10 самых великих армий в мире\n'
-        '/create_token - создать реферальный токен '
-        '(с каждой попытки подключенных к вам '
-        'пользователей вы будете получать 1 солдата)\n'
-        '/my_token - посмотреть свой токен\n'
-        '/link - подключиться к другому пользователю и '
-        'получить 30 солдат в каждый чат '
-        '(вводить можно только 1 раз!)\n\n'
-        'Если бот не отвечает на ваши сообщения, попробуйте '
-        'ввести команду таким образом: /<команда>@group_war_bot '
-        'либо выдайте боту админку\n\n'
-        'Наш канал: t.me/group_war'
-    )
+    await message.answer(messages.help_message)
 
 
 @router.message(filters.Command('army'))
 async def army(message: Message):
-    if message.chat.type not in ('group', 'supergroup'):
-        await message.answer(
-            '🚫Данная команда доступна только в группах',
-            reply_markup=get_bot_invite_keyboard(),
-        )
+    if not tools.is_message_in_group(message):
         return
     db_sess = db_session.create_session()
-    queries.add_new_user_and_group_in_db(db_sess, message)
-    queries.change_username(db_sess, message)
+    queries.add_new_user_and_group_and_change_username(db_sess, message)
     user = queries.get_user_from_group(
         db_sess, message.chat.id, message.from_user.id
     )
@@ -119,11 +88,7 @@ async def army(message: Message):
 
 @router.message(filters.Command('raid'))
 async def raid(message: Message):
-    if message.chat.type not in ('group', 'supergroup'):
-        await message.answer(
-            '🚫Данная команда доступна только в группах',
-            reply_markup=get_bot_invite_keyboard(),
-        )
+    if not tools.is_message_in_group(message):
         return
     text = message.text.split()
     if len(text) == 1 or not text[1].startswith('@'):
@@ -134,8 +99,7 @@ async def raid(message: Message):
         return
     username = text[1][1:]
     db_sess = db_session.create_session()
-    queries.add_new_user_and_group_in_db(db_sess, message)
-    queries.change_username(db_sess, message)
+    queries.add_new_user_and_group_and_change_username(db_sess, message)
     attacking_user = queries.get_user_from_group(
         db_sess, message.chat.id, message.from_user.id
     )
@@ -207,11 +171,7 @@ async def raid(message: Message):
 
 @router.message(filters.Command('top_army'))
 async def top_army(message: Message):
-    if message.chat.type not in ('group', 'supergroup'):
-        await message.answer(
-            '🚫Данная команда доступна только в группах',
-            reply_markup=get_bot_invite_keyboard(),
-        )
+    if not tools.is_message_in_group(message):
         return
     db_sess = db_session.create_session()
     group = queries.get_group_by_telegram_id(db_sess, message.chat.id)
@@ -225,6 +185,8 @@ async def top_army(message: Message):
 
 @router.message(filters.Command('global_top'))
 async def global_top(message: Message):
+    if not tools.is_message_in_group(message):
+        return
     db_sess = db_session.create_session()
     users = queries.get_users_for_global_top(db_sess)
     await message.answer(tools.generate_string_for_top(users, is_global=True))
@@ -232,11 +194,7 @@ async def global_top(message: Message):
 
 @router.message(filters.Command('promo'))
 async def promo(message: Message):
-    if message.chat.type != 'private':
-        await message.answer(
-            f'🚫@{message.from_user.username}, '
-            f'данная команда доступна только в личке с ботом'
-        )
+    if not tools.is_message_personal(message):
         return
     if len(message.text.split()) == 1:
         await message.answer('🚫Введите промокод')
@@ -268,11 +226,7 @@ async def promo(message: Message):
 
 @router.message(filters.Command('create_token'))
 async def create_token(message: Message):
-    if message.chat.type != 'private':
-        await message.answer(
-            f'🚫@{message.from_user.username}, '
-            f'данная команда доступна только в личке с ботом'
-        )
+    if not tools.is_message_personal(message):
         return
     db_sess = db_session.create_session()
     if queries.is_user_parent_ref(db_sess, message):
@@ -294,11 +248,7 @@ async def create_token(message: Message):
 
 @router.message(filters.Command('my_token'))
 async def my_token(message: Message):
-    if message.chat.type != 'private':
-        await message.answer(
-            f'🚫@{message.from_user.username}, '
-            f'данная команда доступна только в личке с ботом'
-        )
+    if not tools.is_message_personal(message):
         return
     db_sess = db_session.create_session()
     if not queries.is_user_parent_ref(db_sess, message):
@@ -315,11 +265,7 @@ async def my_token(message: Message):
 
 @router.message(filters.Command('link'))
 async def link(message: Message):
-    if message.chat.type != 'private':
-        await message.answer(
-            f'🚫@{message.from_user.username}, '
-            f'данная команда доступна только в личке с ботом'
-        )
+    if not tools.is_message_personal(message):
         return
     if len(message.text.split()) == 1:
         await message.answer('🚫Введите токен')
@@ -353,6 +299,8 @@ async def link(message: Message):
 
 @router.message(filters.Command('my_stats'))
 async def my_stats(message: Message):
+    if not tools.is_message_personal(message):
+        return
     db_sess = db_session.create_session()
     user = queries.get_user_from_group(
         db_sess, message.chat.id, message.from_user.id

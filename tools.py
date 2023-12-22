@@ -1,3 +1,6 @@
+from aiogram.types import Message
+
+from inlines import get_bot_invite_keyboard
 from models import User
 
 
@@ -39,6 +42,26 @@ def get_rank(soldiers_count: int) -> str:
             rank = key
             break
     return rank if rank else 'Маршал'
+
+
+async def is_message_in_group(message: Message) -> bool:
+    if message.chat.type not in ('group', 'supergroup'):
+        await message.answer(
+            '🚫Данная команда доступна только в группах',
+            reply_markup=get_bot_invite_keyboard(),
+        )
+        return False
+    return True
+
+
+async def is_message_personal(message: Message) -> bool:
+    if message.chat.type != 'private':
+        await message.answer(
+            f'🚫@{message.from_user.username}, '
+            f'данная команда доступна только в личке с ботом'
+        )
+        return False
+    return True
 
 
 def is_user_can_raid(

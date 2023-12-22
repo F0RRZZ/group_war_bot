@@ -144,6 +144,13 @@ def change_username(db_sess: Session, message: Message) -> None:
     db_sess.commit()
 
 
+def add_new_user_and_group_and_change_username(
+    db_sess: Session, message: Message
+) -> None:
+    add_new_user_and_group_in_db(db_sess, message)
+    change_username(db_sess, message)
+
+
 def is_user_parent_ref(db_sess: Session, message: Message) -> bool:
     parents = (
         db_sess.query(models.ParentReferalUser)
