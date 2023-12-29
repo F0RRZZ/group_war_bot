@@ -1,6 +1,10 @@
+from datetime import datetime
+
 import sqlalchemy as sa
 from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declarative_base
+
+__all__ = []
 
 DeclarativeBase = declarative_base()
 
@@ -23,7 +27,9 @@ class Group(DeclarativeBase):
     __tablename__ = 'groups'
     id = sa.Column(sa.BigInteger, primary_key=True, autoincrement=True)
     users = orm.relationship(
-        'User', secondary=groups_users, back_populates='groups'
+        'User',
+        secondary=groups_users,
+        back_populates='groups',
     )
     telegram_id = sa.Column(sa.BigInteger, index=True, unique=True)
     name = sa.Column(sa.String)
@@ -33,10 +39,14 @@ class User(DeclarativeBase):
     __tablename__ = 'users'
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     groups = orm.relationship(
-        'Group', secondary=groups_users, back_populates='users'
+        'Group',
+        secondary=groups_users,
+        back_populates='users',
     )
     promocodes = orm.relationship(
-        'Promocode', secondary=promocodes_users, back_populates='users'
+        'Promocode',
+        secondary=promocodes_users,
+        back_populates='users',
     )
     telegram_id = sa.Column(sa.BigInteger)
     username = sa.Column(sa.String)
@@ -66,7 +76,8 @@ class ParentReferalUser(DeclarativeBase):
     __tablename__ = 'parent_ref_users'
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     linked_users = orm.relationship(
-        'LinkedReferalUser', back_populates='parent_ref_user'
+        'LinkedReferalUser',
+        back_populates='parent_ref_user',
     )
     telegram_id = sa.Column(sa.BigInteger, index=True, unique=True)
     username = sa.Column(sa.String)
@@ -78,7 +89,21 @@ class LinkedReferalUser(DeclarativeBase):
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     parent_id = sa.Column(sa.Integer, sa.ForeignKey('parent_ref_users.id'))
     parent_ref_user = orm.relationship(
-        'ParentReferalUser', back_populates='linked_users'
+        'ParentReferalUser',
+        back_populates='linked_users',
     )
     telegram_id = sa.Column(sa.BigInteger, index=True, unique=True)
     username = sa.Column(sa.String)
+
+
+class SeasonWinner(DeclarativeBase):
+    __tablename__ = 'season_winners'
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    telegram_id = sa.Column(sa.BigInteger)
+    username = sa.Column(sa.String)
+    first_name = sa.Column(sa.String)
+    last_name = sa.Column(sa.String)
+    soldiers_count = sa.Column(sa.BigInteger, default=0)
+    wins = sa.Column(sa.BigInteger, default=0)
+    defeats = sa.Column(sa.BigInteger, default=0)
+    created_at = sa.Column(sa.DateTime, default=datetime.utcnow)

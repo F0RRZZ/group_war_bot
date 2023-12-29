@@ -3,6 +3,15 @@ from aiogram.types import Message
 from inlines import get_bot_invite_keyboard
 from models import User
 
+__all__ = [
+    'generate_string_for_top',
+    'incline_soldier',
+    'get_rank',
+    'is_message_in_group',
+    'is_message_personal',
+    'is_user_can_raid',
+]
+
 
 def generate_string_for_top(users: list[User], is_global=False) -> str:
     if is_global:
@@ -58,14 +67,15 @@ async def is_message_personal(message: Message) -> bool:
     if message.chat.type != 'private':
         await message.answer(
             f'🚫@{message.from_user.username}, '
-            f'данная команда доступна только в личке с ботом'
+            f'данная команда доступна только в личке с ботом',
         )
         return False
     return True
 
 
 def is_user_can_raid(
-    attacking_user: User, defending_user: User
+    attacking_user: User,
+    defending_user: User,
 ) -> tuple[bool, str | None]:
     if attacking_user.raided_today:
         return False, 'raided_today'

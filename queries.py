@@ -1,5 +1,4 @@
 from aiogram.types import Message
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
@@ -37,7 +36,9 @@ def is_promocode_exists_and_active(db_sess: Session, promocode: str) -> bool:
 
 
 def is_user_used_promo(
-    db_sess: Session, message: Message, promocode: str
+    db_sess: Session,
+    message: Message,
+    promocode: str,
 ) -> bool:
     promocode = get_promocode_by_name(db_sess, promocode)
     for user in promocode.users:
@@ -47,7 +48,9 @@ def is_user_used_promo(
 
 
 def add_user_to_promocode_list(
-    db_sess: Session, message: Message, promocode: models.Promocode
+    db_sess: Session,
+    message: Message,
+    promocode: models.Promocode,
 ) -> None:
     user = get_user_id_by_username(db_sess, message.from_user.username)
     user = (
@@ -60,7 +63,8 @@ def add_user_to_promocode_list(
 
 
 def get_group_by_telegram_id(
-    db_sess: Session, telegram_id: int
+    db_sess: Session,
+    telegram_id: int,
 ) -> models.Group:
     return (
         db_sess.query(models.Group)
@@ -81,7 +85,8 @@ def get_user_id_by_username(db_sess: Session, username: str) -> int | None:
 
 
 def get_promocode_by_name(
-    db_sess: Session, promocode: str
+    db_sess: Session,
+    promocode: str,
 ) -> models.Promocode:
     return (
         db_sess.query(models.Promocode)
@@ -107,7 +112,9 @@ def add_new_user_and_group_in_db(db_sess: Session, message: Message) -> None:
 
 
 def get_user_from_group(
-    db_sess: Session, chat_id: int, user_id: int
+    db_sess: Session,
+    chat_id: int,
+    user_id: int,
 ) -> models.User:
     group = get_group_by_telegram_id(db_sess, chat_id)
     from_user = None
@@ -128,7 +135,8 @@ def get_users_for_global_top(db_sess: Session) -> list[models.User]:
 
 
 def get_all_users_by_id(
-    db_sess: Session, telegram_id: int
+    db_sess: Session,
+    telegram_id: int,
 ) -> list[models.User]:
     return (
         db_sess.query(models.User)
@@ -145,7 +153,8 @@ def change_username(db_sess: Session, message: Message) -> None:
 
 
 def add_new_user_and_group_and_change_username(
-    db_sess: Session, message: Message
+    db_sess: Session,
+    message: Message,
 ) -> None:
     add_new_user_and_group_in_db(db_sess, message)
     change_username(db_sess, message)
@@ -171,7 +180,8 @@ def create_parent_ref(db_sess: Session, message: Message, token: str) -> None:
 
 
 def get_parent_ref_by_id(
-    db_sess: Session, message: Message
+    db_sess: Session,
+    message: Message,
 ) -> models.ParentReferalUser:
     return (
         db_sess.query(models.ParentReferalUser)
@@ -181,7 +191,8 @@ def get_parent_ref_by_id(
 
 
 def get_parent_ref_by_token(
-    db_sess: Session, token: str
+    db_sess: Session,
+    token: str,
 ) -> models.ParentReferalUser:
     return (
         db_sess.query(models.ParentReferalUser)
@@ -200,7 +211,9 @@ def is_user_linked(db_sess: Session, telegram_id: int) -> bool:
 
 
 def create_linked_user(
-    db_sess: Session, message: Message, parent: models.ParentReferalUser
+    db_sess: Session,
+    message: Message,
+    parent: models.ParentReferalUser,
 ) -> None:
     linked_user = models.LinkedReferalUser(
         parent_ref_user=parent,
@@ -212,10 +225,20 @@ def create_linked_user(
 
 
 def get_linked_user(
-    db_sess: Session, telegram_id: int
+    db_sess: Session,
+    telegram_id: int,
 ) -> models.LinkedReferalUser:
     return (
         db_sess.query(models.LinkedReferalUser)
         .filter(models.LinkedReferalUser.telegram_id == telegram_id)
         .first()
+    )
+
+
+def get_season_winners(db_sess: Session) -> list[models.User]:
+    return (
+        db_sess.query(models.User)
+        .order_by(models.User.soldiers_count.desc(), models.User.wins.desc())
+        .limit(10)
+        .all()
     )

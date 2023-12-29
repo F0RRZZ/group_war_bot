@@ -22,6 +22,14 @@ async def main():
         hour=22,
         start_date=dt.now(),
     )
+    scheduler.add_job(
+        apsched.reset_stats,
+        trigger='cron',
+        day=1,
+        hour=0,
+        minute=0,
+        start_date=dt.now(),
+    )
     scheduler.start()
     await bot.delete_webhook()
     dp.message.register(

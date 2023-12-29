@@ -49,18 +49,21 @@ async def army(message: Message):
     db_sess = db_session.create_session()
     queries.add_new_user_and_group_and_change_username(db_sess, message)
     user = queries.get_user_from_group(
-        db_sess, message.chat.id, message.from_user.id
+        db_sess,
+        message.chat.id,
+        message.from_user.id,
     )
     if user.increased_today:
         await message.answer(
             f'🚫@{user.username}, вы уже играли сегодня!\n'
-            f'Следующее обновление в 22:00 по МСК'
+            f'Следующее обновление в 22:00 по МСК',
         )
         return
     if random() > 0.6:
         if user.soldiers_count != 0:
             delta_army = randint(
-                -10 if user.soldiers_count >= 10 else -user.soldiers_count, -1
+                -10 if user.soldiers_count >= 10 else -user.soldiers_count,
+                -1,
             )
         else:
             delta_army = randint(1, 20)
@@ -75,7 +78,7 @@ async def army(message: Message):
         f'{abs(delta_army)} {tools.incline_soldier(abs(delta_army))}!\n'
         f'Всего у вас {user.soldiers_count} '
         f'{tools.incline_soldier(user.soldiers_count)}.\n'
-        f'Ваше звание: {tools.get_rank(user.soldiers_count)}'
+        f'Ваше звание: {tools.get_rank(user.soldiers_count)}',
     )
     if queries.is_user_linked(db_sess, message.from_user.id):
         linked_user = queries.get_linked_user(db_sess, message.from_user.id)
@@ -101,11 +104,15 @@ async def raid(message: Message):
     db_sess = db_session.create_session()
     queries.add_new_user_and_group_and_change_username(db_sess, message)
     attacking_user = queries.get_user_from_group(
-        db_sess, message.chat.id, message.from_user.id
+        db_sess,
+        message.chat.id,
+        message.from_user.id,
     )
     defending_user = queries.get_user_id_by_username(db_sess, username)
     defending_user = queries.get_user_from_group(
-        db_sess, message.chat.id, defending_user
+        db_sess,
+        message.chat.id,
+        defending_user,
     )
     error_answers = {
         'raided_today': f'🚫@{attacking_user.username}, '
@@ -131,7 +138,7 @@ async def raid(message: Message):
             delta = 20
         else:
             attacking_user.soldiers_count += floor(
-                defending_user.soldiers_count / 10
+                defending_user.soldiers_count / 10,
             )
             delta = int(floor(defending_user.soldiers_count / 10))
         soldiers_delta = attacking_user.soldiers_count
@@ -140,7 +147,7 @@ async def raid(message: Message):
             f'{delta} {tools.incline_soldier(delta)}.\n'
             f'Всего у вас {soldiers_delta} '
             f'{tools.incline_soldier(soldiers_delta)}\n'
-            f'Ваше звание: {tools.get_rank(soldiers_delta)}'
+            f'Ваше звание: {tools.get_rank(soldiers_delta)}',
         )
         defending_user.soldiers_count -= delta
         attacking_user.wins += 1
@@ -151,7 +158,7 @@ async def raid(message: Message):
             delta = 20
         else:
             defending_user.soldiers_count += floor(
-                attacking_user.soldiers_count / 10
+                attacking_user.soldiers_count / 10,
             )
             delta = int(floor(attacking_user.soldiers_count / 10))
         soldiers_delta = attacking_user.soldiers_count - delta
@@ -160,7 +167,7 @@ async def raid(message: Message):
             f'{delta} {tools.incline_soldier(delta)}.'
             f'Всего у вас {soldiers_delta} '
             f'{tools.incline_soldier(soldiers_delta)}\n'
-            f'Ваше звание: {tools.get_rank(soldiers_delta)}'
+            f'Ваше звание: {tools.get_rank(soldiers_delta)}',
         )
         attacking_user.soldiers_count -= delta
         attacking_user.defeats += 1
@@ -203,7 +210,7 @@ async def promo(message: Message):
     promocode = message.text.split()[1]
     if not queries.is_promocode_exists_and_active(db_sess, promocode):
         await message.answer(
-            f'🚫Промокода {promocode} не существует, либо он неактивен.'
+            f'🚫Промокода {promocode} не существует, либо он неактивен.',
         )
         return
     if queries.is_user_used_promo(db_sess, message, promocode):
@@ -220,7 +227,7 @@ async def promo(message: Message):
     db_sess.commit()
     await message.answer(
         f'✅Вы получили бонус в размере {promocode.bonus_soldiers} '
-        f'{tools.incline_soldier(promocode.bonus_soldiers)}'
+        f'{tools.incline_soldier(promocode.bonus_soldiers)}',
     )
 
 
@@ -253,7 +260,7 @@ async def my_token(message: Message):
     db_sess = db_session.create_session()
     if not queries.is_user_parent_ref(db_sess, message):
         await message.answer(
-            '⚠️Вы еще не создали токен. Чтобы создать введите /create_token'
+            '⚠️Вы еще не создали токен. Чтобы создать введите /create_token',
         )
         return
     ref = queries.get_parent_ref_by_id(db_sess, message)
@@ -276,7 +283,7 @@ async def link(message: Message):
         linked_user = queries.get_linked_user(db_sess, message.chat.id)
         await message.answer(
             f'🚫Вы уже привязаны к пользователю '
-            f'@{linked_user.parent_ref_user.username}'
+            f'@{linked_user.parent_ref_user.username}',
         )
         return
     parent_user = queries.get_parent_ref_by_token(db_sess, token)
@@ -293,7 +300,7 @@ async def link(message: Message):
     db_sess.commit()
     await message.answer(
         f'✅Вы привязаны к пользователю @{parent_user.username}\n\n'
-        f'Также вам начисленно 30 солдат во все чаты'
+        f'Также вам начисленно 30 солдат во все чаты',
     )
 
 
@@ -303,7 +310,9 @@ async def my_stats(message: Message):
         return
     db_sess = db_session.create_session()
     user = queries.get_user_from_group(
-        db_sess, message.chat.id, message.from_user.id
+        db_sess,
+        message.chat.id,
+        message.from_user.id,
     )
     rank = tools.get_rank(user.soldiers_count)
     photo = FSInputFile(f'ranks/{rank.lower()}.png')
